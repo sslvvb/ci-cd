@@ -1,0 +1,56 @@
+stages:
+    - build
+    - style
+    - test
+    - deploy
+
+build:
+    stage: build
+    script:
+        - cd src
+        - mkdir artifacts
+        - cd cat
+        - make s21_cat
+        - mv s21_cat ../artifacts
+        - cd ../grep
+        - make s21_grep
+        - mv s21_grep ../artifacts
+    after_script:
+        - ./src/telegram.sh
+    artifacts:
+        paths:
+            - src/artifacts/s21_cat
+            - src/artifacts/s21_grep
+        expire_in: 30 days
+
+style:
+    stage: style
+    script:
+        - cd src
+        - python3 cpplint.py --extensions=c cat/*.c
+        - python3 cpplint.py --extensions=c grep/*.c
+    after_script:
+        - ./src/telegram.sh
+    allow_failure: false
+
+test:
+    stage: test
+    script:
+        - cp src/artifacts/s21_cat src/cat/s21_cat
+        - cp src/artifacts/s21_grep src/grep/s21_grep
+        - cd src/cat
+        - ./test.sh
+        - cd ../grep
+        - ./test.sh
+    after_script:
+        - ./src/telegram.sh
+    allow_failure: false
+
+deploy:
+    stage: deploy
+    when: manual
+    script:
+        - ./src/deploy.sh
+    after_script:
+        - ./src/telegram.sh
+    allow_failure: false
